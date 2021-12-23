@@ -2,6 +2,7 @@ import os
 import sd
 from sd.api import *
 from PySide2 import QtWidgets
+from sd.api.sdapplication import SDApplicationPath
 from sd.api.sdpackage import SDPackage
 from sd.api.sdproperty import SDPropertyCategory
 
@@ -39,6 +40,10 @@ class PowerSDPackageUtils:
     __packageMgr = None
 
     @staticmethod
+    def getDefaultResourcePath():
+        return sd.getContext().getSDApplication().getPath(SDApplicationPath.DefaultResourcesDir)
+
+    @staticmethod
     def getPackageMgr():
         if PowerSDPackageUtils.__packageMgr is None:
             PowerSDPackageUtils.__packageMgr = sd.getContext().getSDApplication().getPackageMgr()
@@ -54,7 +59,8 @@ class PowerSDPackageUtils:
             (name, ext) = os.path.splitext(filename)
             if name == packageName:
                 return package
-        return None
+        resourcePath = PowerSDPackageUtils.getDefaultResourcePath()
+        return packageMgr.loadUserPackage(os.path.join(resourcePath, "packages", "{}.{}".format(packageName, "sbs")))
 
     @staticmethod
     def findResource(package: SDPackage, identifier: str):
@@ -65,10 +71,6 @@ class PowerSDPackageUtils:
 
 
 class PowerSDFunctionGraphUtils:
-
-    @staticmethod
-    def newGetValueNode(functionGraph: SDSBSFunctionGraph, property: SDProperty):
-        return PowerSDFunctionGraphUtils.newGetValueNode(functionGraph, property.getType(), property.getId())
 
     @staticmethod
     def newGetValueNode(functionGraph: SDSBSFunctionGraph, valueType: SDType, identifier: str):
@@ -94,16 +96,17 @@ class PowerSDNodeUtils:
     @staticmethod
     def exposeInputProperty(node: SDNode, graph: SDGraph, property: SDProperty):
         propertyId = property.getId()
-        print(propertyId)
         nodeProperty = node.getPropertyFromId(propertyId, SDPropertyCategory.Input)
         if graph.getPropertyFromId(propertyId, SDPropertyCategory.Input) is None:
             graph.newProperty(propertyId, property.getType(), SDPropertyCategory.Input)
         functionGraph = node.getPropertyGraph(nodeProperty)
         if functionGraph is None:
             functionGraph = node.newPropertyGraph(nodeProperty, "SDSBSFunctionGraph")
-        getValueNode = PowerSDFunctionGraphUtils.newGetValueNode(functionGraph, property)
+        getValueNode = PowerSDFunctionGraphUtils.newGetValueNode(functionGraph, property.getType(), property.getId())
         functionGraph.setOutputNode(getValueNode, True)
 
 
-def initializeSDPlugin():
-    print()
+#def initializeSDPlugin():
+#    print()
+
+print("PowerSDUtilsLoaded")

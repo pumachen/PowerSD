@@ -1,5 +1,4 @@
 from utils import *
-import sd
 from sd.ui.graphgrid import *
 from sd.api.sbs.sdsbscompgraph import *
 from sd.api.sbs.sdsbscompnode import *
@@ -30,12 +29,26 @@ def setIterationProperty(itrNode: SDSBSCompNode):
     getStartValueNode.newPropertyConnectionFromId("unique_filter_output", addNode, "a")
     mulNode.newPropertyConnectionFromId("unique_filter_output", addNode, "b")
     itrValueFunction.setOutputNode(addNode, True)
+
     itrIValueProperty = itrNode.getPropertyFromId("ivalue", SDPropertyCategory.Input)
     itrIValueFunction = itrNode.newPropertyGraph(itrIValueProperty, "SDSBSFunctionGraph")
-    getValueNode = itrIValueFunction.newNode("sbs::function::get_float1")
-    toIntegerNode = itrIValueFunction.newNode("sbs::function::toint1")
-    getValueNode.newPropertyConnectionFromId("unique_filter_output", toIntegerNode, "value")
-    itrIValueFunction.setOutputNode(toIntegerNode, True)
+    getIterationNode = itrIValueFunction.newNode("sbs::function::get_integer1")
+    getIterationNode.setInputPropertyValueFromId("__constant__", SDValueString.sNew("iteration"))
+    getStartValueNode = itrIValueFunction.newNode("sbs::function::get_float1")
+    getStartValueNode.setInputPropertyValueFromId("__constant__", SDValueString.sNew("startvalue"))
+    getIncrementNode = itrIValueFunction.newNode("sbs::function::get_float1")
+    getIncrementNode.setInputPropertyValueFromId("__constant__", SDValueString.sNew("increment"))
+    addNode = itrIValueFunction.newNode("sbs::function::add")
+    mulNode = itrIValueFunction.newNode("sbs::function::mul")
+    toFloatNode = itrIValueFunction.newNode("sbs::function::tofloat")
+    toIntNode = itrIValueFunction.newNode("sbs::function::toint1")
+    getIterationNode.newPropertyConnectionFromId("unique_filter_output", toFloatNode, "value")
+    toFloatNode.newPropertyConnectionFromId("unique_filter_output", mulNode, "a")
+    getIncrementNode.newPropertyConnectionFromId("unique_filter_output", mulNode, "b")
+    getStartValueNode.newPropertyConnectionFromId("unique_filter_output", addNode, "a")
+    mulNode.newPropertyConnectionFromId("unique_filter_output", addNode, "b")
+    addNode.newPropertyConnectionFromId("unique_filter_output", toIntNode, "value")
+    itrIValueFunction.setOutputNode(toIntNode, True)
 
 
 def createForLoopGraph(compNode: SDSBSCompNode):
@@ -143,7 +156,7 @@ def createForLoopGraph(compNode: SDSBSCompNode):
         outputNode = graph.newNode("sbs::compositing::output")
         feedbackId = feedbackProperty.getId()
         outputNode.setAnnotationPropertyValueFromId("identifier", SDValueString.sNew(feedbackId))
-        prevSwitchNode.newPropertyConnectionFromId('output', outputNode, "inputNodeOutput")
+        prevSwitchNode.newPropertyConnectionFromId("output", outputNode, "inputNodeOutput")
         outputNode.setPosition(float2(posX, (feedbackIdx + 1) * 1.5 * cGridSize))
 
 
@@ -154,6 +167,9 @@ def generateLoopGraph():
         createForLoopGraph(node)
 
 
+PowerSDUIUtils.registerMenuItem("GenerateLoopGraph", generateLoopGraph)
+
+
 # Init
-def initializeSDPlugin():
-    PowerSDUIUtils.registerMenuItem("GenerateLoopGraph", generateLoopGraph)
+# def initializeSDPlugin():
+#     PowerSDUIUtils.registerMenuItem("GenerateLoopGraph", generateLoopGraph)
