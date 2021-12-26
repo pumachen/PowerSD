@@ -1,6 +1,8 @@
 import os
 import sd
 from sd.api import *
+from PySide2 import QtCore
+from PySide2 import QtUiTools
 from PySide2 import QtWidgets
 from sd.api.sdapplication import SDApplicationPath
 from sd.api.sdpackage import SDPackage
@@ -34,6 +36,15 @@ class PowerSDUIUtils:
         action = QtWidgets.QAction(menuTitle, menu)
         action.triggered.connect(triggered)
         menu.addAction(action)
+
+    @staticmethod
+    def loadUIFile(filename: str, parent):
+        loader = QtUiTools.QUiLoader()
+        uiFile = QtCore.QFile(filename)
+        uiFile.open(QtCore.QFile.ReadOnly)
+        ui = loader.load(uiFile, parent)
+        uiFile.close()
+        return ui
 
 
 class PowerSDPackageUtils:
@@ -106,7 +117,37 @@ class PowerSDNodeUtils:
         functionGraph.setOutputNode(getValueNode, True)
 
 
-#def initializeSDPlugin():
+class PowerSDGraphUtils:
+
+    @staticmethod
+    def newProperty(
+            graph: SDSBSCompGraph,
+            srcProperty: SDProperty,
+            annotations,  #: dict[SDProperty, SDValue],
+            category: SDPropertyCategory):
+        propertyTypeMapping = {
+            "SDTypeInt": SDTypeInt.sNew(),
+            "SDTypeInt2": SDTypeInt2.sNew(),
+            "SDTypeInt3": SDTypeInt3.sNew(),
+            "SDTypeInt4": SDTypeInt4.sNew(),
+            "SDTypeFloat": SDTypeFloat.sNew(),
+            "SDTypeFloat2": SDTypeFloat2.sNew(),
+            "SDTypeFloat3": SDTypeFloat3.sNew(),
+            "SDTypeFloat4": SDTypeFloat4.sNew(),
+            "SDTypeBool": SDTypeBool.sNew(),
+            "SDTypeString": SDTypeString.sNew(),
+            "SDTypeEnum": SDTypeInt.sNew(),
+            "SDTypeColorRGB": SDTypeFloat3.sNew(),
+            "SDTypeColorRGBA": SDTypeFloat4.sNew(),
+        }
+        propertyType = propertyTypeMapping[srcProperty.getType().getClassName()]
+        property = graph.newProperty(srcProperty.getId(), propertyType, category)
+        srcAnnotations = graph.getPropertyAnnotations(srcProperty)
+        for annotation, val in annotations.items():
+            graph.setPropertyAnnotationValueFromId(property, annotation.getId(), val)
+
+
+# def initializeSDPlugin():
 #    print()
 
 print("PowerSDUtilsLoaded")
