@@ -1,12 +1,14 @@
 import os
 import sd
-from sd.api import *
 from PySide2 import QtCore
 from PySide2 import QtUiTools
 from PySide2 import QtWidgets
+from sd.api import *
 from sd.api.sdapplication import SDApplicationPath
 from sd.api.sdpackage import SDPackage
 from sd.api.sdproperty import SDPropertyCategory
+from sd.api.sdbasetypes import float2
+from sd.ui.graphgrid import GraphGrid
 
 
 class PowerSDUIUtils:
@@ -80,6 +82,14 @@ class PowerSDPackageUtils:
                 return resource
         return None
 
+    @staticmethod
+    def getGraphResource(graph: SDSBSCompGraph):
+        package = graph.getPackage()
+        for resource in package.getChildrenResources(True):
+            if resource.getIdentifier() == graph.getIdentifier():
+                return resource
+        return None
+
 
 class PowerSDFunctionGraphUtils:
 
@@ -116,8 +126,26 @@ class PowerSDNodeUtils:
         getValueNode = PowerSDFunctionGraphUtils.newGetValueNode(functionGraph, property.getType(), property.getId())
         functionGraph.setOutputNode(getValueNode, True)
 
+    @staticmethod
+    def setPositionByGridSize(node: SDNode, pos: float2):
+        cGridSize = GraphGrid.sGetFirstLevelSize()
+        node.setPosition(float2(pos.x * cGridSize, pos.y * cGridSize))
+
 
 class PowerSDGraphUtils:
+
+    @staticmethod
+    def getInputNodes(graph: SDSBSCompGraph):
+        inputNodes = []
+        for node in graph.getNodes():
+            identifier = node.getDefinition().getId()
+            if identifier == "sbs::compositing::input_grayscale":
+                inputNodes.append((node, True))
+            elif identifier == "sbs::compositing::input_color":
+                inputNodes.append((node, False))
+            else:
+                continue
+        return inputNodes
 
     @staticmethod
     def newProperty(

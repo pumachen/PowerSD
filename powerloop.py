@@ -13,71 +13,107 @@ from sd.api.sdproperty import *
 
 
 def setIterationProperty(itrNode: SDSBSCompNode):
-    itrValueProperty = itrNode.getPropertyFromId("value", SDPropertyCategory.Input)
-    itrValueFunction = itrNode.newPropertyGraph(itrValueProperty, "SDSBSFunctionGraph")
+    # value Function
+    itrValueFunction = itrNode.newPropertyGraph(
+        itrNode.getPropertyFromId("value", SDPropertyCategory.Input),
+        "SDSBSFunctionGraph")
+
     getIterationNode = itrValueFunction.newNode("sbs::function::get_integer1")
     getIterationNode.setInputPropertyValueFromId("__constant__", SDValueString.sNew("iteration"))
-    getStartValueNode = itrValueFunction.newNode("sbs::function::get_float1")
-    getStartValueNode.setInputPropertyValueFromId("__constant__", SDValueString.sNew("startvalue"))
+    PowerSDNodeUtils.setPositionByGridSize(getIterationNode, float2(0, 0))
+
+    toFloatNode = itrValueFunction.newNode("sbs::function::tofloat")
+    PowerSDNodeUtils.setPositionByGridSize(toFloatNode, float2(1.5, 0))
+
     getIncrementNode = itrValueFunction.newNode("sbs::function::get_float1")
     getIncrementNode.setInputPropertyValueFromId("__constant__", SDValueString.sNew("increment"))
-    addNode = itrValueFunction.newNode("sbs::function::add")
+    PowerSDNodeUtils.setPositionByGridSize(getIncrementNode, float2(1.5, -1.5))
+
+    getStartValueNode = itrValueFunction.newNode("sbs::function::get_float1")
+    getStartValueNode.setInputPropertyValueFromId("__constant__", SDValueString.sNew("startvalue"))
+    PowerSDNodeUtils.setPositionByGridSize(getStartValueNode, float2(3, 0.75))
+
     mulNode = itrValueFunction.newNode("sbs::function::mul")
-    toFloatNode = itrValueFunction.newNode("sbs::function::tofloat")
+    PowerSDNodeUtils.setPositionByGridSize(mulNode, float2(3, -0.75))
+
+    addNode = itrValueFunction.newNode("sbs::function::add")
+    PowerSDNodeUtils.setPositionByGridSize(addNode, float2(4.5, 0))
+
     getIterationNode.newPropertyConnectionFromId("unique_filter_output", toFloatNode, "value")
-    toFloatNode.newPropertyConnectionFromId("unique_filter_output", mulNode, "a")
-    getIncrementNode.newPropertyConnectionFromId("unique_filter_output", mulNode, "b")
-    getStartValueNode.newPropertyConnectionFromId("unique_filter_output", addNode, "a")
-    mulNode.newPropertyConnectionFromId("unique_filter_output", addNode, "b")
+    getIncrementNode.newPropertyConnectionFromId("unique_filter_output", mulNode, "a")
+    toFloatNode.newPropertyConnectionFromId("unique_filter_output", mulNode, "b")
+    mulNode.newPropertyConnectionFromId("unique_filter_output", addNode, "a")
+    getStartValueNode.newPropertyConnectionFromId("unique_filter_output", addNode, "b")
     itrValueFunction.setOutputNode(addNode, True)
 
-    itrIValueProperty = itrNode.getPropertyFromId("ivalue", SDPropertyCategory.Input)
-    itrIValueFunction = itrNode.newPropertyGraph(itrIValueProperty, "SDSBSFunctionGraph")
+    # ivalue Function
+    itrIValueFunction = itrNode.newPropertyGraph(
+        itrNode.getPropertyFromId("ivalue", SDPropertyCategory.Input),
+        "SDSBSFunctionGraph")
+
     getIterationNode = itrIValueFunction.newNode("sbs::function::get_integer1")
     getIterationNode.setInputPropertyValueFromId("__constant__", SDValueString.sNew("iteration"))
-    getStartValueNode = itrIValueFunction.newNode("sbs::function::get_float1")
-    getStartValueNode.setInputPropertyValueFromId("__constant__", SDValueString.sNew("startvalue"))
+    PowerSDNodeUtils.setPositionByGridSize(getIterationNode, float2(0, 0))
+
+    toFloatNode = itrIValueFunction.newNode("sbs::function::tofloat")
+    PowerSDNodeUtils.setPositionByGridSize(toFloatNode, float2(1.5, 0))
+
     getIncrementNode = itrIValueFunction.newNode("sbs::function::get_float1")
     getIncrementNode.setInputPropertyValueFromId("__constant__", SDValueString.sNew("increment"))
-    addNode = itrIValueFunction.newNode("sbs::function::add")
+    PowerSDNodeUtils.setPositionByGridSize(getIncrementNode, float2(1.5, -1.5))
+
     mulNode = itrIValueFunction.newNode("sbs::function::mul")
-    toFloatNode = itrIValueFunction.newNode("sbs::function::tofloat")
+    PowerSDNodeUtils.setPositionByGridSize(mulNode, float2(3, -0.75))
+
+    getStartValueNode = itrIValueFunction.newNode("sbs::function::get_float1")
+    getStartValueNode.setInputPropertyValueFromId("__constant__", SDValueString.sNew("startvalue"))
+    PowerSDNodeUtils.setPositionByGridSize(getStartValueNode, float2(3, 0.75))
+
+    addNode = itrIValueFunction.newNode("sbs::function::add")
+    PowerSDNodeUtils.setPositionByGridSize(addNode, float2(4.5, 0))
+
     toIntNode = itrIValueFunction.newNode("sbs::function::toint1")
+    PowerSDNodeUtils.setPositionByGridSize(toIntNode, float2(6, 0))
+
     getIterationNode.newPropertyConnectionFromId("unique_filter_output", toFloatNode, "value")
-    toFloatNode.newPropertyConnectionFromId("unique_filter_output", mulNode, "a")
-    getIncrementNode.newPropertyConnectionFromId("unique_filter_output", mulNode, "b")
-    getStartValueNode.newPropertyConnectionFromId("unique_filter_output", addNode, "a")
-    mulNode.newPropertyConnectionFromId("unique_filter_output", addNode, "b")
+    getIncrementNode.newPropertyConnectionFromId("unique_filter_output", mulNode, "a")
+    toFloatNode.newPropertyConnectionFromId("unique_filter_output", mulNode, "b")
+    mulNode.newPropertyConnectionFromId("unique_filter_output", addNode, "a")
+    getStartValueNode.newPropertyConnectionFromId("unique_filter_output", addNode, "b")
     addNode.newPropertyConnectionFromId("unique_filter_output", toIntNode, "value")
     itrIValueFunction.setOutputNode(toIntNode, True)
 
 
-def createLoopGraph(compNode: SDSBSCompNode, maxIteration=16):
+def createLoopGraph(compGraph: SDSBSCompGraph, maxIteration=16):
     with SDHistoryUtils.UndoGroup("Create Loop Graph"):
-        srcResource = compNode.getReferencedResource()
-        package = srcResource.getPackage()
+        package = compGraph.getPackage()
+        srcResource = PowerSDPackageUtils.getGraphResource(compGraph)
 
         loopGraph = SDSBSCompGraph.sNew(package)
 
-        loopGraph.setIdentifier(srcResource.getIdentifier().replace("Iteration", ""))
+        loopGraph.setIdentifier(compGraph.getIdentifier().replace("Iteration", ""))
         cGridSize = GraphGrid.sGetFirstLevelSize()
 
         inputProperties = [
             loopGraph.newProperty(property.getId(), property.getType(), SDPropertyCategory.Input)
-            for property in compNode.getProperties(SDPropertyCategory.Input)
+            for property in compGraph.getProperties(SDPropertyCategory.Input)
             if not property.getId().startswith("$")
             and not property.getId() == "numiterations"
             and not property.getId() == "iteration"
             and not property.getId() == "value"
             and not property.getId() == "ivalue"
             and not property.isConnectable()]
-        inputFeedbackProperties = [
-            property for property in compNode.getProperties(SDPropertyCategory.Input)
-            if property.getId().startswith("Feedback_")]
+        srcInputNodes = PowerSDGraphUtils.getInputNodes(compGraph)
+        srcInputFeedbackNodes = [
+            (node, isGrayscale) for (node, isGrayscale) in srcInputNodes
+            if node.getAnnotationPropertyValueFromId("identifier").get().startswith("Feedback_")]
+        srcInputNodes = [
+            (node, isGrayscale) for (node, isGrayscale) in srcInputNodes
+            if not node.getAnnotationPropertyValueFromId("identifier").get().startswith("Feedback_")]
+
         outputFeedbackProperties = [
-            property for property in compNode.getProperties(SDPropertyCategory.Output)
+            property for property in compGraph.getProperties(SDPropertyCategory.Output)
             if property.getId().startswith("Feedback_")]
-        feedbackProperties = inputFeedbackProperties
         numIterationProperty = loopGraph.newProperty("numiterations", SDTypeInt.sNew(), SDPropertyCategory.Input)
         startValueProperty = loopGraph.newProperty("startvalue", SDTypeFloat.sNew(), SDPropertyCategory.Input)
         incrementProperty = loopGraph.newProperty("increment", SDTypeFloat.sNew(), SDPropertyCategory.Input)
@@ -91,23 +127,18 @@ def createLoopGraph(compNode: SDSBSCompNode, maxIteration=16):
         inputGrayscaleResource = "sbs::compositing::input_grayscale"
         inputColorResource = "sbs::compositing::input_color"
 
-        inputNodeProperties = [
-            property for property in compNode.getProperties(SDPropertyCategory.Input)
-            if not property.getId().startswith("Feedback_")
-            and property.isConnectable()]
         inputNodes = []
-        for inputNodeProperty in inputNodeProperties:
-            inputId = inputNodeProperty.getId()
-            inputNode = loopGraph.newNode(inputGrayscaleResource)
+        for (srcInputNode, isGrayscale) in srcInputNodes:
+            inputId = srcInputNode.getAnnotationPropertyValueFromId("identifier").get()
+            inputNode = loopGraph.newNode(inputGrayscaleResource if isGrayscale else inputColorResource)
             inputNode.setAnnotationPropertyValueFromId("identifier", SDValueString.sNew(inputId))
             inputNodes.append(inputNode)
-
         # Create Input Feedback Nodes
         inputFeedbackNodes = []
         posX = -cGridSize
         posY = 1.5 * cGridSize
-        for feedbackProperty in feedbackProperties:
-            feedbackId = feedbackProperty.getId()
+        for (srcInputFeedbackNode, isGrayscale) in srcInputFeedbackNodes:
+            feedbackId = srcInputFeedbackNode.getAnnotationPropertyValueFromId("identifier").get()
             inputResource = inputGrayscaleResource if feedbackId.startswith("Feedback_L_") else inputColorResource
             inputFeedbackNode = loopGraph.newNode(inputResource)
             inputFeedbackNode.setAnnotationPropertyValueFromId("identifier", SDValueString.sNew(feedbackId))
@@ -134,9 +165,9 @@ def createLoopGraph(compNode: SDSBSCompNode, maxIteration=16):
             setIterationProperty(itrNode)
 
             switchNodes = []
-            for feedbackIdx in range(len(feedbackProperties)):
-                feedbackProperty = feedbackProperties[feedbackIdx]
-                feedbackId = feedbackProperty.getId()
+            for feedbackIdx in range(len(srcInputFeedbackNodes)):
+                (srcFeedbackNode, isGrayscale) = srcInputFeedbackNodes[feedbackIdx]
+                feedbackId = srcFeedbackNode.getAnnotationPropertyValueFromId("identifier").get()
 
                 # Create Switch Node
                 switchResource = switchGrayscaleResource if feedbackId.startswith("Feedback_L_") else switchColorResource
@@ -163,21 +194,21 @@ def createLoopGraph(compNode: SDSBSCompNode, maxIteration=16):
                     inputFeedbackNode.newPropertyConnectionFromId("unique_filter_output", switchNode, "input_2")
                 itrNode.newPropertyConnectionFromId(feedbackId, switchNode, "input_1")
                 switchNodes.append(switchNode)
-            for inputIdx in range(len(inputNodeProperties)):
-                inputProperty = inputNodeProperties[inputIdx]
+            for inputIdx in range(len(srcInputNodes)):
                 inputNode = inputNodes[inputIdx]
-                inputId = inputProperty.getId()
+                (srcInputNode, isGrayscale) = srcInputNodes[inputIdx]
+                inputId = srcInputNode.getAnnotationPropertyValueFromId("identifier").get()
                 inputNode.newPropertyConnectionFromId("unique_filter_output", itrNode, inputId)
             prevItrNode = itrNode
             prevSwitchNodes = switchNodes
 
         # Create Output Nodes
         posX += 2.5 * cGridSize
-        for feedbackIdx in range(len(feedbackProperties)):
-            feedbackProperty = feedbackProperties[feedbackIdx]
+        for feedbackIdx in range(len(srcInputFeedbackNodes)):
+            (srcFeedbackNode, isGrayscale) = srcInputFeedbackNodes[feedbackIdx]
+            feedbackId = srcFeedbackNode.getAnnotationPropertyValueFromId("identifier").get()
             prevSwitchNode = prevSwitchNodes[feedbackIdx]
             outputNode = loopGraph.newNode("sbs::compositing::output")
-            feedbackId = feedbackProperty.getId()
             outputNode.setAnnotationPropertyValueFromId("identifier", SDValueString.sNew(feedbackId))
             prevSwitchNode.newPropertyConnectionFromId("output", outputNode, "inputNodeOutput")
             outputNode.setPosition(float2(posX, (feedbackIdx + 1) * 1.5 * cGridSize))
@@ -185,14 +216,13 @@ def createLoopGraph(compNode: SDSBSCompNode, maxIteration=16):
 
 def createLoopGraphWindow():
     uiMgr = PowerSDUIUtils.getUIMgr()
+    graph = uiMgr.getCurrentGraph()
+    if graph is None:
+        return
     mainWindow = uiMgr.getMainWindow()
     window = PowerSDUIUtils.loadUIFile("D:/workspace/Substance/Plugins/Python/PowerSD/CreateLoopGraph.ui", mainWindow)
-    selection = uiMgr.getCurrentGraphSelectedNodes()
-    node = selection[0]
-    if node.getClassName() != "SDSBSCompNode":
-        return
     window.show()
-    window.buttonBox.accepted.connect(lambda: createLoopGraph(node, window.max_iterations.value()))
+    window.buttonBox.accepted.connect(lambda: createLoopGraph(graph, window.max_iterations.value()))
 
 
 def setupIterationProperties():
