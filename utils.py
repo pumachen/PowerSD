@@ -20,44 +20,6 @@ class PowerSDUtils:
         return powerSDRootDir
 
 
-class PowerSDUIUtils:
-    __uiMgr = None
-
-    @staticmethod
-    def getUIMgr():
-        if PowerSDUIUtils.__uiMgr is None:
-            PowerSDUIUtils.__uiMgr = sd.getContext().getSDApplication().getQtForPythonUIMgr()
-        return PowerSDUIUtils.__uiMgr
-
-    @staticmethod
-    def getPowerSDMenu():
-        uiMgr = PowerSDUIUtils.getUIMgr()
-        menu = uiMgr.findMenuFromObjectName("PowerSD")
-        if menu is None:
-            menu = uiMgr.newMenu(menuTitle="PowerSD", objectName="PowerSD")
-        return menu
-
-    @staticmethod
-    def registerMenuItem(menuTitle: str, triggered):
-        menu = PowerSDUIUtils.getPowerSDMenu()
-        for action in menu.actions():
-            if action.text() == menuTitle:
-                menu.removeAction(action)
-                break
-        action = QtWidgets.QAction(menuTitle, menu)
-        action.triggered.connect(triggered)
-        menu.addAction(action)
-
-    @staticmethod
-    def loadUIFile(filename: str, parent):
-        loader = QtUiTools.QUiLoader()
-        uiFile = QtCore.QFile(filename)
-        uiFile.open(QtCore.QFile.ReadOnly)
-        ui = loader.load(uiFile, parent)
-        uiFile.close()
-        return ui
-
-
 class PowerSDPackageUtils:
     __packageMgr = None
 
@@ -121,7 +83,7 @@ class PowerSDFunctionGraphUtils:
         return getValueNode
 
 
-class PowerSDNodeUtils:
+class PowerSDPropertyUtils:
 
     @staticmethod
     def exposeInputProperty(node: SDNode, graph: SDGraph, property: SDProperty):
@@ -134,6 +96,20 @@ class PowerSDNodeUtils:
             functionGraph = node.newPropertyGraph(nodeProperty, "SDSBSFunctionGraph")
         getValueNode = PowerSDFunctionGraphUtils.newGetValueNode(functionGraph, property.getType(), property.getId())
         functionGraph.setOutputNode(getValueNode, True)
+
+    @staticmethod
+    def createPropertyFromTemplate(templateProperty: SDProperty, srcGraph: SDGraph, dstGraph: SDGraph):
+        property = dstGraph.newProperty(templateProperty.getId(), templateProperty.getType(), SDPropertyCategory.Input)
+        annotations = srcGraph.getPropertyAnnotations(templateProperty)
+        for annotation in annotations:
+            value = srcGraph.getPropertyAnnotationValueFromId(templateProperty, annotation.getId())
+            if value is not None and value.get() != "dropdownlist":
+                dstGraph.setPropertyAnnotationValueFromId(property, annotation.getId(), value)
+        dstGraph.setPropertyValue(property, srcGraph.getPropertyValue(templateProperty))
+        return property
+
+
+class PowerSDNodeUtils:
 
     @staticmethod
     def setPositionByGridSize(node: SDNode, pos: float2):
@@ -184,7 +160,51 @@ class PowerSDGraphUtils:
             graph.setPropertyAnnotationValueFromId(property, annotation.getId(), val)
 
 
-# def initializeSDPlugin():
-#    print()
+class PowerSDUIUtils:
+    __uiMgr = None
+    __pathToMenu = {}
 
-print("PowerSDUtilsLoaded")
+    @staticmethod
+    def getUIMgr():
+        if PowerSDUIUtils.__uiMgr is None:
+            PowerSDUIUtils.__uiMgr = sd.getContext().getSDApplication().getQtForPythonUIMgr()
+        return PowerSDUIUtils.__uiMgr
+
+    @staticmethod
+    def getMenu(menuPath: str, create=False):
+        uiMgr = PowerSDUIUtils.getUIMgr()
+        menu = PowerSDUIUtils.__pathToMenu.get(menuPath)
+        if menu is None and create:
+            (parentPath, title) = os.path.split(menuPath)
+            if parentPath == "":
+                menu = uiMgr.newMenu(menuTitle=title, objectName=title)
+            else:
+                parent = PowerSDUIUtils.getMenu(parentPath, True)
+                menu = parent.addMenu(title)
+            PowerSDUIUtils.__pathToMenu[menuPath] = menu
+        return menu
+
+    @staticmethod
+    def registerMenuItem(menuPath: str, triggered):
+        (menu, title) = os.path.split(menuPath)
+        menu = PowerSDUIUtils.getMenu(menu, True)
+        for action in menu.actions():
+            if action.text() == title:
+                menu.removeAction(action)
+                break
+        action = QtWidgets.QAction(title, menu)
+        action.triggered.connect(triggered)
+        menu.addAction(action)
+
+    @staticmethod
+    def loadUIFile(filename: str, parent):
+        loader = QtUiTools.QUiLoader()
+        uiFile = QtCore.QFile(filename)
+        uiFile.open(QtCore.QFile.ReadOnly)
+        ui = loader.load(uiFile, parent)
+        uiFile.close()
+        return ui
+
+
+def initializeSDPlugin():
+    print()

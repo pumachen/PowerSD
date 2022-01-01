@@ -91,11 +91,11 @@ def createLoopGraph(compGraph: SDSBSCompGraph, maxIteration=16):
 
         loopGraph = SDSBSCompGraph.sNew(package)
 
-        loopGraph.setIdentifier(compGraph.getIdentifier().replace("Iteration", ""))
+        loopGraph.setIdentifier("{}_{}".format(compGraph.getIdentifier(), "Loop"))
         cGridSize = GraphGrid.sGetFirstLevelSize()
 
         inputProperties = [
-            loopGraph.newProperty(property.getId(), property.getType(), SDPropertyCategory.Input)
+            PowerSDPropertyUtils.createPropertyFromTemplate(property, compGraph, loopGraph)
             for property in compGraph.getProperties(SDPropertyCategory.Input)
             if not property.getId().startswith("$")
             and not property.getId() == "numiterations"
@@ -121,12 +121,12 @@ def createLoopGraph(compGraph: SDSBSCompGraph, maxIteration=16):
         loopGraph.setPropertyAnnotationValueFromId(numIterationProperty, "max", SDValueInt.sNew(maxIteration))
         loopGraph.setPropertyAnnotationValueFromId(numIterationProperty, "step", SDValueInt.sNew(1))
         loopGraph.setPropertyAnnotationValueFromId(numIterationProperty, "clamp", SDValueBool.sNew(True))
+        loopGraph.setPropertyValue(startValueProperty, SDValueFloat.sNew(0))
         inputProperties.append(numIterationProperty)
 
         # Create Input Nodes
         inputGrayscaleResource = "sbs::compositing::input_grayscale"
         inputColorResource = "sbs::compositing::input_color"
-
         inputNodes = []
         for (srcInputNode, isGrayscale) in srcInputNodes:
             inputId = srcInputNode.getAnnotationPropertyValueFromId("identifier").get()
@@ -139,7 +139,7 @@ def createLoopGraph(compGraph: SDSBSCompGraph, maxIteration=16):
         posY = 1.5 * cGridSize
         for (srcInputFeedbackNode, isGrayscale) in srcInputFeedbackNodes:
             feedbackId = srcInputFeedbackNode.getAnnotationPropertyValueFromId("identifier").get()
-            inputResource = inputGrayscaleResource if feedbackId.startswith("Feedback_L_") else inputColorResource
+            inputResource = inputGrayscaleResource if isGrayscale else inputColorResource
             inputFeedbackNode = loopGraph.newNode(inputResource)
             inputFeedbackNode.setAnnotationPropertyValueFromId("identifier", SDValueString.sNew(feedbackId))
             inputFeedbackNode.setPosition(float2(posX, posY))
@@ -161,7 +161,7 @@ def createLoopGraph(compGraph: SDSBSCompGraph, maxIteration=16):
 
             # Create Input Property
             for inputProperty in inputProperties:
-                PowerSDNodeUtils.exposeInputProperty(itrNode, loopGraph, inputProperty)
+                PowerSDPropertyUtils.exposeInputProperty(itrNode, loopGraph, inputProperty)
             setIterationProperty(itrNode)
 
             switchNodes = []
@@ -170,7 +170,7 @@ def createLoopGraph(compGraph: SDSBSCompGraph, maxIteration=16):
                 feedbackId = srcFeedbackNode.getAnnotationPropertyValueFromId("identifier").get()
 
                 # Create Switch Node
-                switchResource = switchGrayscaleResource if feedbackId.startswith("Feedback_L_") else switchColorResource
+                switchResource = switchGrayscaleResource if isGrayscale else switchColorResource
                 switchNode = loopGraph.newInstanceNode(switchResource)
                 switchNode.setPosition(float2(posX + cGridSize, (feedbackIdx + 1) * 1.5 * cGridSize))
                 switchProperty = switchNode.getPropertyFromId("switch", SDPropertyCategory.Input)
@@ -245,15 +245,15 @@ def setupIterationProperties():
             ivalueProperty = graph.newProperty("ivalue", SDTypeInt.sNew(), SDPropertyCategory.Input)
 
 
-def createFeedbackNode(identifier: str, isGrayscale: bool):
-    with SDHistoryUtils.UndoGroup("Create Feedback Node"):
+def addFeedbackNode(identifier: str, isGrayscale: bool):
+    with SDHistoryUtils.UndoGroup("Add Feedback Node"):
         graph = PowerSDUIUtils.getUIMgr().getCurrentGraph()
         if graph is None:
             return
         cGridSize = GraphGrid.sGetFirstLevelSize()
         inputFeedbackNode = graph.newNode("sbs::compositing::input_grayscale") \
             if isGrayscale else graph.newNode("sbs::compositing::input_color")
-        identifier = "Feedback_{}_{}".format("L" if isGrayscale else "C", identifier)
+        identifier = "Feedback_{}".format(identifier)
         inputFeedbackNode.setAnnotationPropertyValueFromId("identifier", SDValueString.sNew(identifier))
         inputFeedbackNode.setPosition(float2(0, 0))
         outputFeedbackNode = graph.newNode("sbs::compositing::output")
@@ -262,19 +262,17 @@ def createFeedbackNode(identifier: str, isGrayscale: bool):
         inputFeedbackNode.newPropertyConnectionFromId("unique_filter_output", outputFeedbackNode, "inputNodeOutput")
 
 
-def createFeedbackNodeWindow():
+def addFeedbackNodeWindow():
     mainWindow = PowerSDUIUtils.getUIMgr().getMainWindow()
-    url = os.path.join(PowerSDUtils.getPowerSDRootDir(), "CreateFeedbackNode.ui")
+    url = os.path.join(PowerSDUtils.getPowerSDRootDir(), "AddFeedbackNode.ui")
     window = PowerSDUIUtils.loadUIFile(url, mainWindow)
     window.show()
-    window.buttonBox.accepted.connect(lambda: createFeedbackNode(window.name.text(), window.color.currentText() == "Grayscale"))
+    window.buttonBox.accepted.connect(lambda: addFeedbackNode(window.name.text(), window.color.currentText() == "Grayscale"))
     window.buttonBox.rejected.connect(lambda: window.close())
 
 
-PowerSDUIUtils.registerMenuItem("Create Loop Graph", createLoopGraphWindow)
-PowerSDUIUtils.registerMenuItem("Setup Iteration Properties", setupIterationProperties)
-PowerSDUIUtils.registerMenuItem("Create Feedback Node", createFeedbackNodeWindow)
-
 # Init
-# def initializeSDPlugin():
-#     PowerSDUIUtils.registerMenuItem("GenerateLoopGraph", generateLoopGraph)
+def initializeSDPlugin():
+    PowerSDUIUtils.registerMenuItem("PowerSD/Loop/Setup Iteration Properties", setupIterationProperties)
+    PowerSDUIUtils.registerMenuItem("PowerSD/Loop/Add Feedback Node", addFeedbackNodeWindow)
+    PowerSDUIUtils.registerMenuItem("PowerSD/Loop/Create Loop Graph", createLoopGraphWindow)
