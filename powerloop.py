@@ -220,7 +220,8 @@ def createLoopGraphWindow():
     if graph is None:
         return
     mainWindow = uiMgr.getMainWindow()
-    window = PowerSDUIUtils.loadUIFile("D:/workspace/Substance/Plugins/Python/PowerSD/CreateLoopGraph.ui", mainWindow)
+    url = os.path.join(PowerSDUtils.getPowerSDRootDir(), "CreateLoopGraph.ui")
+    window = PowerSDUIUtils.loadUIFile(url, mainWindow)
     window.show()
     window.buttonBox.accepted.connect(lambda: createLoopGraph(graph, window.max_iterations.value()))
 
@@ -263,7 +264,8 @@ def createFeedbackNode(identifier: str, isGrayscale: bool):
 
 def createFeedbackNodeWindow():
     mainWindow = PowerSDUIUtils.getUIMgr().getMainWindow()
-    window = PowerSDUIUtils.loadUIFile("D:/workspace/Substance/Plugins/Python/PowerSD/CreateFeedbackNode.ui", mainWindow)
+    url = os.path.join(PowerSDUtils.getPowerSDRootDir(), "CreateFeedbackNode.ui")
+    window = PowerSDUIUtils.loadUIFile(url, mainWindow)
     window.show()
     window.buttonBox.accepted.connect(lambda: createFeedbackNode(window.name.text(), window.color.currentText() == "Grayscale"))
     window.buttonBox.rejected.connect(lambda: window.close())
@@ -272,7 +274,6 @@ def createFeedbackNodeWindow():
 PowerSDUIUtils.registerMenuItem("Create Loop Graph", createLoopGraphWindow)
 PowerSDUIUtils.registerMenuItem("Setup Iteration Properties", setupIterationProperties)
 PowerSDUIUtils.registerMenuItem("Create Feedback Node", createFeedbackNodeWindow)
-
 
 # Init
 # def initializeSDPlugin():

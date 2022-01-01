@@ -11,6 +11,15 @@ from sd.api.sdbasetypes import float2
 from sd.ui.graphgrid import GraphGrid
 
 
+powerSDRootDir = os.path.dirname(__file__)
+
+
+class PowerSDUtils:
+    @staticmethod
+    def getPowerSDRootDir():
+        return powerSDRootDir
+
+
 class PowerSDUIUtils:
     __uiMgr = None
 
