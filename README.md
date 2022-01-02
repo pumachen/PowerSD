@@ -13,8 +13,8 @@ Houdini style loop graph generator
 
 ### Iteration Graph
 
-![PowerLoopIteration](./Image/PowerLoopIteration.png)
+![PowerLoopIteration](./image/PowerLoopIteration.png)
 
 ### Generated Loop Graph
 
-![PowerLoop](./Image/PowerLoop.png)
+![PowerLoop](./image/PowerLoop.png)
